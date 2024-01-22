@@ -93,9 +93,11 @@ class Instructor:
         max_val_epoch = 0
         global_step = 0
         path = None
+        c_epoch = 0
         for i_epoch in range(self.opt.num_epoch):
             logger.info('>' * 100)
             logger.info('epoch: {}'.format(i_epoch))
+            c_epoch = i_epoch
             n_correct, n_total, loss_total = 0, 0, 0
             # switch model to training mode
             self.model.train()
@@ -138,7 +140,7 @@ class Instructor:
             if i_epoch - max_val_epoch >= self.opt.patience:
                 print('>> early stop.')
                 break
-        return path
+        return path, c_epoch
 
     def _evaluate_acc_f1(self, data_loader):
         n_correct, n_total = 0, 0
@@ -177,25 +179,26 @@ class Instructor:
         val_data_loader = DataLoader(dataset=self.valset, batch_size=self.opt.batch_size, shuffle=False)
 
         self._reset_params()
-        best_model_path = self._train(criterion, optimizer, train_data_loader, val_data_loader)
+        best_model_path, epoch = self._train(criterion, optimizer, train_data_loader, val_data_loader)
         self.model.load_state_dict(torch.load(best_model_path))
         test_acc, test_f1 = self._evaluate_acc_f1(test_data_loader)
         logger.info('>> test_acc: {:.4f}, test_f1: {:.4f}'.format(test_acc, test_f1))
+        return test_acc, test_f1, epoch
 
 
 def main():
     # 传入参数
     # Hyper Parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_name', default='atae_lstm', type=str)
+    parser.add_argument('--model_name', default='aen_bert', type=str)
     parser.add_argument('--dataset', default='laptop', type=str, help='twitter, restaurant, laptop')
     parser.add_argument('--optimizer', default='adam', type=str)
     parser.add_argument('--initializer', default='xavier_uniform_', type=str)
-    parser.add_argument('--lr', default=1e-3, type=float, help='try 5e-5, 2e-5 for BERT, 1e-3 for others')
+    parser.add_argument('--lr', default=2e-5, type=float, help='try 5e-5, 2e-5 for BERT, 1e-3 for others')
     parser.add_argument('--dropout', default=0.14, type=float)
     parser.add_argument('--l2reg', default=0.01, type=float)
-    parser.add_argument('--num_epoch', default=30, type=int, help='try larger number for non-BERT models')  # 训练次数
-    parser.add_argument('--batch_size', default=100, type=int, help='try 16, 32, 64 for BERT models')
+    parser.add_argument('--num_epoch', default=4, type=int, help='try larger number for non-BERT models')  # 训练次数
+    parser.add_argument('--batch_size', default=32, type=int, help='try 16, 32, 64 for BERT models')
     parser.add_argument('--log_step', default=10, type=int)  # 记录损失
     parser.add_argument('--embed_dim', default=300, type=int)  # 查询向量（嵌入层）的维度（超参数），将稀疏高维转向稠密低维
     parser.add_argument('--hidden_dim', default=300, type=int)  # 隐藏层维数，即隐藏层节点个数
@@ -207,7 +210,7 @@ def main():
     parser.add_argument('--patience', default=5, type=int)  # 连续多少次损失不下降，即停止训练
     parser.add_argument('--device', default=None, type=str, help='e.g. cuda:0')
     parser.add_argument('--seed', default=int(random.random() * 10000), type=int, help='set seed for reproducibility')
-    parser.add_argument('--valset_ratio', default=0.2, type=float,
+    parser.add_argument('--valset_ratio', default=0.25, type=float,
                         help='set ratio between 0 and 1 for validation support')  # 验证集比例
     # The following parameters are only valid for the lcf-bert model
     parser.add_argument('--local_context_focus', default='cdm', type=str, help='local context focus mode, cdw or cdm')
@@ -256,7 +259,7 @@ def main():
             'test': './datasets/semeval14/Restaurants_Test_Gold.xml.seg'
         },
         'laptop': {
-            'train': './datasets/semeval14/Laptops_Train.xml.seg',
+            'train': './datasets/semeval14/prot_file.xml.seg',
             'test': './datasets/semeval14/Laptops_Test_Gold.xml.seg'
         }
     }

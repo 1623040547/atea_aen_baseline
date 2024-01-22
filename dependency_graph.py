@@ -5,8 +5,8 @@ import spacy
 import pickle
 import argparse
 
-
 from spacy.tokens import Doc
+
 
 class WhitespaceTokenizer(object):
     def __init__(self, vocab):
@@ -18,8 +18,10 @@ class WhitespaceTokenizer(object):
         spaces = [True] * len(words)
         return Doc(self.vocab, words=words, spaces=spaces)
 
+
 nlp = spacy.load('en_core_web_sm')
 nlp.tokenizer = WhitespaceTokenizer(nlp.vocab)
+
 
 def dependency_adj_matrix(text):
     # https://spacy.io/docs/usage/processing-text
@@ -36,30 +38,32 @@ def dependency_adj_matrix(text):
 
     return matrix
 
+
 def process(filename):
     fin = open(filename, 'r', encoding='utf-8', newline='\n', errors='ignore')
     lines = fin.readlines()
     fin.close()
     idx2graph = {}
-    fout = open(filename+'.graph', 'wb')
+    fout = open(filename + '.graph', 'wb')
     for i in range(0, len(lines), 3):
         text_left, _, text_right = [s.strip() for s in lines[i].partition("$T$")]
         aspect = lines[i + 1].strip()
-        adj_matrix = dependency_adj_matrix(text_left+' '+aspect+' '+text_right)
+        adj_matrix = dependency_adj_matrix(text_left + ' ' + aspect + ' ' + text_right)
         idx2graph[i] = adj_matrix
-    pickle.dump(idx2graph, fout)        
-    fout.close() 
+    pickle.dump(idx2graph, fout)
+    fout.close()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', default=None, type=str, help='path to dataset')
     opt = parser.parse_args()
-    process(opt.dataset)
-
+    # process(opt.dataset)
+    process('C:/Users/16230/Desktop/ABSA-PyTorch-master/datasets/semeval14/aug_file.xml.seg')
+    # process('C:/Users/16230/Desktop/ABSA-PyTorch-master/datasets/semeval14/prot_file.xml.seg')
     # process('./datasets/acl-14-short-data/train.raw')
     # process('./datasets/acl-14-short-data/test.raw')
     # process('./datasets/semeval14/Restaurants_Train.xml.seg')
     # process('./datasets/semeval14/Restaurants_Test_Gold.xml.seg')
     # process('./datasets/semeval14/Laptops_Train.xml.seg')
     # process('./datasets/semeval14/Laptops_Test_Gold.xml.seg')
-
